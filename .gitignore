@@ -1,0 +1,17 @@
+# AWS local files
+.aws/
+
+# Build artifacts
+/bin/
+/obj/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc

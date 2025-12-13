@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DevOps Exercise App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    input { padding: 0.5rem; width: 300px; }
+    button { padding: 0.5rem 0.75rem; }
+  </style>
+</head>
+<body>
+  <h2>Hi Ofer, say something:</h2>
+  <form action="/echo" method="POST">
+    <input type="text" name="message" placeholder="Type here" />
+    <button type="submit">Send</button>
+  </form>
+  <p>
+    <a href="/healthz">Health</a> |
+    <a href="/metrics">Metrics</a>
+  </p>
+</body>
+</html>

@@ -1,0 +1,59 @@
+name: CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: <region>
+          role-to-assume: arn:aws:iam::<account-id>:role/GitHubOIDCDeployRole
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region <region> --name devops-exercise
+
+      - name: Verify cluster access
+        run: kubectl get nodes
+
+      # Patch manifest with SHA (replace IMAGE_TAG placeholder)
+      - name: Patch manifest with SHA
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          sed -i "s#IMAGE_TAG#${IMAGE_TAG}#g" k8s/deployment.yaml
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+          kubectl apply -f k8s/servicemonitor.yaml
+          kubectl get deployment flask-app -n app -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/flask-app -n app
+
+      - name: Debug pods if rollout fails
+        if: failure()
+        run: |
+          echo "=== Pods in app namespace ==="
+          kubectl get pods -n app -o wide
+          echo "=== Events for flask-app deployment ==="
+          kubectl describe deployment flask-app -n app
+          echo "=== Pod logs ==="
+          for pod in $(kubectl get pods -n app -l app=flask-app -o jsonpath='{.items[*].metadata.name}'); do
+            echo "--- Logs for $pod ---"
+            kubectl logs $pod -n app --tail=50 || true
+          done
